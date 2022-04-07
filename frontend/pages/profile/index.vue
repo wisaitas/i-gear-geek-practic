@@ -1,5 +1,5 @@
 <template>
-    <h2>hello profile Pear Pear jung</h2>
+    <h2>hello profile</h2>
 </template>
 
 <script>
