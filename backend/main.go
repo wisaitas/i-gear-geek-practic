@@ -2,17 +2,20 @@ package main
 
 import (
 	"strconv"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
+	jwtmiddleware "github.com/gofiber/jwt/v3"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 var db *gorm.DB
 
-const jwtSecret = "igeargeek"
+const jwtSecret = "igeargeekjiw"
 
 func main() {
 
@@ -24,6 +27,17 @@ func main() {
 	}
 
 	app := fiber.New()
+
+	app.Use("/profile",jwtmiddleware.New(jwtmiddleware.Config{
+		SigningMethod: "HS256",
+		SigningKey: []byte(jwtSecret),
+		SuccessHandler: func(c *fiber.Ctx) error {
+			return c.Next()
+		},
+		ErrorHandler: func(c *fiber.Ctx,e error) error {
+			return fiber.ErrUnauthorized
+		},
+	}))
 
 	app.Get("/profile", getAllProfiles)
 	app.Post("/signup", signup)
@@ -42,7 +56,7 @@ func signup(c *fiber.Ctx) error {
 		return err
 	}
 
-	if request.Username == "" || request.Password == "" || strconv.Itoa(request.Age) == "0" || request.Name == "" {
+	if request.Username == "" || request.Password == "" || strconv.Itoa(request.Age) <= "0" || request.Name == "" {
 		return fiber.ErrUnprocessableEntity
 	}
 
@@ -90,7 +104,20 @@ func login(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusNotFound, "Incorrect Username or Password")
 	}
 
-	return c.Status(fiber.StatusOK).JSON(&user)
+	claims := jwt.StandardClaims{
+		Issuer: strconv.Itoa(user.Id),
+		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+	}
+
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256,claims)
+	token , err := jwtToken.SignedString([]byte(jwtSecret))
+	if err != nil {
+		return c.SendString("Error token")
+	}
+
+	return c.JSON(fiber.Map{
+		"jwtToken":token,
+	})
 }
 
 func getAllProfiles(c *fiber.Ctx) error {
@@ -151,8 +178,8 @@ func updateProfiles(c *fiber.Ctx) error {
 }
 
 type User struct {
-	// Id int `gorm:"primaryKey" json:"id"`
-	gorm.Model
+	Id int `gorm:"primaryKey" json:"id"`
+	// gorm.Model
 	Username string `gorm:"column:username;varchar(20)" json:"username"`
 	Password string `gorm:"column:password;varchar(255)" json:"password"`
 	Name     string `gorm:"columns:name;varchar(50) json:"name"`
