@@ -1,9 +1,10 @@
 <template>
-    <h2>hello profile</h2>
+    <h2>hello profile require login</h2>
 </template>
 
 <script>
 export default {
-    layout: "navbar"
+    layout: "navbar",
+    middleware: 'auth'
 }
 </script>

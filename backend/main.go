@@ -11,6 +11,8 @@ import (
 	jwtmiddleware "github.com/gofiber/jwt/v3"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
 var db *gorm.DB
@@ -28,6 +30,11 @@ func main() {
 
 	app := fiber.New()
 
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,PUT,DELETE",
+	}))
+
 	app.Use("/profile",jwtmiddleware.New(jwtmiddleware.Config{
 		SigningMethod: "HS256",
 		SigningKey: []byte(jwtSecret),
@@ -38,6 +45,8 @@ func main() {
 			return fiber.ErrUnauthorized
 		},
 	}))
+
+	app.Use(logger.New())
 
 	app.Get("/profile", getAllProfiles)
 	app.Post("/signup", signup)
@@ -56,7 +65,7 @@ func signup(c *fiber.Ctx) error {
 		return err
 	}
 
-	if request.Username == "" || request.Password == "" || strconv.Itoa(request.Age) <= "0" || request.Name == "" {
+	if request.Username == "" || request.Password == "" || strconv.Itoa(request.UserDetail.Age) <= "0" || request.UserDetail.Fname == "" || request.UserDetail.Lname == "" {
 		return fiber.ErrUnprocessableEntity
 	}
 
@@ -144,15 +153,18 @@ func updateProfiles(c *fiber.Ctx) error {
 	type UpdateRequest struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
-		Name     string `json:"name"`
-		Age      int    `json:"age"`
+		UserDetail struct {
+			Fname string `json:"first_name"`
+			Lname string `json:"last_name"`
+			Age int `json:"age"`
+		} `json:"userdetail"`
 	}
 	var request UpdateRequest
 	if err := c.BodyParser(&request); err != nil {
 		return err
 	}
 
-	if request.Username == "" || request.Password == "" || (request.Name == "" && strconv.Itoa(request.Age) == "0"){
+	if request.Username == "" || request.Password == "" || (request.UserDetail.Fname == "" && strconv.Itoa(request.UserDetail.Age) <= "0"){
 		return fiber.ErrUnprocessableEntity
 	}
 
@@ -165,16 +177,28 @@ func updateProfiles(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusNotFound,"Username or Password not have in database")
 	}
 
-	if request.Name != "" && strconv.Itoa(request.Age) != "0" {
-		db.Model(&User{}).Where("username = ?",request.Username).Update("name",request.Name)
-		db.Model(&User{}).Where("username = ?",request.Username).Update("age",request.Age)
-	} else if request.Name != "" && strconv.Itoa(request.Age) == "0" {
-		db.Model(&User{}).Where("username = ?",request.Username).Update("name",request.Name)
-	} else if request.Name == "" && strconv.Itoa(request.Age) != "0" {
-		db.Model(&User{}).Where("username = ?",request.Username).Update("age",request.Age)
+	if request.UserDetail.Fname != "" && strconv.Itoa(request.UserDetail.Age) > "0" && request.UserDetail.Lname != "" {
+		db.Model(&User{}).Where("username = ?",request.Username).Updates(map[string]interface{}{
+			"first_name":request.UserDetail.Fname,
+			"last_name":request.UserDetail.Lname,
+			"age":request.UserDetail.Age,
+		})
+		// db.Model(&User{}).Where("username = ?",request.Username).Update("name",request.UserDetail.Fname)
+		// db.Model(&User{}).Where("username = ?",request.Username).Update("age",request.UserDetail.Age)
+	} else if request.UserDetail.Fname != "" && strconv.Itoa(request.UserDetail.Age) <= "0" && request.UserDetail.Lname == ""{
+		db.Model(&User{}).Where("username = ?",request.Username).Update("name",request.UserDetail.Fname)
+	} else if request.UserDetail.Fname == "" && strconv.Itoa(request.UserDetail.Age) >= "0" && request.UserDetail.Lname == ""{
+		db.Model(&User{}).Where("username = ?",request.Username).Update("age",request.UserDetail.Age)
+	} else if request.UserDetail.Fname == "" && strconv.Itoa(request.UserDetail.Age) <= "0" && request.UserDetail.Lname != ""{
+		db.Model(&User{}).Where("username = ?",request.Username).Update("age",request.UserDetail.Lname)
 	}
 
 	return c.Status(fiber.StatusOK).SendString("Putted")
+}
+type UserDetail struct {
+	Fname string `gorm:"column:first_name;varchar(20)" json:"first_name"`
+	Lname string `gorm:"column:last_name;varchar(20)" json:"last_name"`
+	Age int `gorm:"column:age;int" json:"age"`
 }
 
 type User struct {
@@ -182,6 +206,7 @@ type User struct {
 	// gorm.Model
 	Username string `gorm:"column:username;varchar(20)" json:"username"`
 	Password string `gorm:"column:password;varchar(255)" json:"password"`
-	Name     string `gorm:"columns:name;varchar(50) json:"name"`
-	Age      int    `gorm:"column:age;int" json:"age"`
+	UserDetail UserDetail `gorm:"embedded;varchar(11)" json:"userdetail"`
+	// Name     string `gorm:"columns:name;varchar(50) json:"name"`
+	// Age      int    `gorm:"column:age;int" json:"age"`
 }

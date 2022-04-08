@@ -38,7 +38,32 @@ export default {
     'bootstrap-vue/nuxt',
     // https://go.nuxtjs.dev/axios
     '@nuxtjs/axios',
+    '@nuxtjs/auth-next',
   ],
+  auth: {
+    redirect: {
+      login: '/login'
+    },
+    strategies: {
+      local: {
+        token: {
+          property: 'auth.token',
+          global: true,
+          // required: true,
+          // type: 'Bearer'
+        },
+        user: {
+          property: 'user',
+          // autoFetch: true
+        },
+        endpoints: {
+          login: { url: 'http://localhost:8000/login', method: 'post' ,propertyName:'jwtToken'},
+          logout: { url: 'http://localhost:8000/login', method: 'delete' },
+          user: { url: 'http://localhost:8000/profile', method: 'get' }
+        }
+      }
+    }
+  },
 
   // Axios module configuration: https://go.nuxtjs.dev/config-axios
   axios: {
