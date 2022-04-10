@@ -1,5 +1,5 @@
 <template>
-  <div class="ml-3 my-3">
+  <div class="my-3" align="center">
         <b-card
             align="center"
             title="Login"
@@ -21,7 +21,8 @@
                 
                 <b-button type="submit" variant="primary">Login</b-button>
             </b-form>
-            <b-card header="result" class="mt-3">token : {{this.token}}</b-card>
+            <b-card header="result" class="mt-3">username : {{this.form.username}}</b-card>
+            <b-card header="result" class="mt-3">password : {{this.form.password}}</b-card>
         </b-card>
     </div>
 </template>
@@ -35,37 +36,18 @@ export default {
                 username:"",
                 password:"",
             },
-            token: "",
         }
     },
     methods:{
-        // async handlerLoginClicked() {
-        //     try {
-        //         const response = await this.$auth.loginWith('local',{data: {username: this.form.username,password: this.form.password}})
-        //         console.log(response)
-        //     } catch (error) {
-        //         console.log(error)
-        //     }
-        // }
         async onSubmit(evt){
+            evt.preventDefault()
             try {
-                const response = await this.$auth.loginWith('local',{data: {username:this.fomr.username},passowrd:this.form.password})
-                console.log(err)
+                const response = await this.$auth.loginWith('local',{data: this.form})
+                await this.$router.push('/')
+                console.log(response)
             } catch (err) {
                 console.log(err)
             }
-            // evt.preventDefault()
-            // const res = await axios.post('http://localhost:8000/login',{
-            //     username:this.form.username,
-            //     password:this.form.password
-            // })
-            // .then(res => {
-            //     localStorage.setItem('token',res.data.jwtToken)
-            //     this.token = localStorage.getItem('token')
-            // })
-            // .catch(err => {
-            //     console.log(err)
-            // })
         }
     }
 }

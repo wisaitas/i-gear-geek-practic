@@ -47,18 +47,15 @@ export default {
     strategies: {
       local: {
         token: {
-          property: 'auth.token',
-          global: true,
-          // required: true,
-          // type: 'Bearer'
+          property:'userdetail.auth_jwt',
         },
         user: {
-          property: 'user',
-          // autoFetch: true
+          property: 'userdetail',
+          // autoFetch: false
         },
         endpoints: {
-          login: { url: 'http://localhost:8000/login', method: 'post' ,propertyName:'jwtToken'},
-          logout: { url: 'http://localhost:8000/login', method: 'delete' },
+          login: { url: 'http://localhost:8000/login', method: 'post'},
+          logout: { url: 'http://localhost:8000/logout', method: 'post' },
           user: { url: 'http://localhost:8000/profile', method: 'get' }
         }
       }

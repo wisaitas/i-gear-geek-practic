@@ -2,17 +2,19 @@ package main
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gofiber/fiber/v2"
-	"golang.org/x/crypto/bcrypt"
-	jwtmiddleware "github.com/gofiber/jwt/v3"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+
+	// jwtmiddleware "github.com/gofiber/jwt/v3"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 var db *gorm.DB
@@ -35,22 +37,24 @@ func main() {
 		AllowMethods: "GET,POST,PUT,DELETE",
 	}))
 
-	app.Use("/profile",jwtmiddleware.New(jwtmiddleware.Config{
-		SigningMethod: "HS256",
-		SigningKey: []byte(jwtSecret),
-		SuccessHandler: func(c *fiber.Ctx) error {
-			return c.Next()
-		},
-		ErrorHandler: func(c *fiber.Ctx,e error) error {
-			return fiber.ErrUnauthorized
-		},
-	}))
-
+	// app.Use("/profiles",jwtmiddleware.New(jwtmiddleware.Config{
+	// 	SigningMethod: "HS256",
+	// 	SigningKey: []byte(jwtSecret),
+	// 	SuccessHandler: func(c *fiber.Ctx) error {
+	// 		return c.Next()
+	// 	},
+	// 	ErrorHandler: func(c *fiber.Ctx,e error) error {
+	// 		return fiber.ErrUnauthorized
+	// 	},
+	// }))
+	
 	app.Use(logger.New())
 
-	app.Get("/profile", getAllProfiles)
+	app.Get("/profiles", getAllProfiles)
+	app.Get("/profile",getProfile)
 	app.Post("/signup", signup)
 	app.Post("/login", login)
+	app.Post("/logout",logout)
 	app.Delete("/profile/:id", deleteProfiles)
 	app.Put("/profile", updateProfiles)
 
@@ -65,7 +69,7 @@ func signup(c *fiber.Ctx) error {
 		return err
 	}
 
-	if request.Username == "" || request.Password == "" || strconv.Itoa(request.UserDetail.Age) <= "0" || request.UserDetail.Fname == "" || request.UserDetail.Lname == "" {
+	if request.Username == "" || request.Password == "" || strconv.Itoa(request.UserDetail.Age) == "0" || request.UserDetail.Fname == "" || request.UserDetail.Lname == ""{
 		return fiber.ErrUnprocessableEntity
 	}
 
@@ -87,7 +91,21 @@ func signup(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.Status(fiber.StatusCreated).SendString("Updated")
+	var user User
+	claims := jwt.StandardClaims{
+		Issuer: strconv.Itoa(user.Id),
+		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+	}
+
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256,claims)
+	token , err := jwtToken.SignedString([]byte(jwtSecret))
+	if err != nil {
+		return c.SendString("Error token")
+	}
+
+	db.Model(&User{}).Where("username = ?",request.Username).Update("auth_jwt",token)
+
+	return c.Status(fiber.StatusCreated).SendString("Signup Complete")
 }
 
 func login(c *fiber.Ctx) error {
@@ -113,21 +131,26 @@ func login(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusNotFound, "Incorrect Username or Password")
 	}
 
-	claims := jwt.StandardClaims{
-		Issuer: strconv.Itoa(user.Id),
-		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
-	}
-
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256,claims)
-	token , err := jwtToken.SignedString([]byte(jwtSecret))
-	if err != nil {
-		return c.SendString("Error token")
-	}
-
-	return c.JSON(fiber.Map{
-		"jwtToken":token,
-	})
+	return c.JSON(user)
 }
+
+func logout(c *fiber.Ctx) error {
+	return c.SendString("Logout Success")
+}
+
+func getProfile(c *fiber.Ctx) error {
+	var user User
+	// valueFromHeader := string(request)
+	valueFromHeader := c.Get("Authorization")
+	splitStr := strings.Split(valueFromHeader," ")
+	if result := db.Where("auth_jwt = ?",splitStr[1]).Find(&user); result.Error != nil {
+		return fiber.NewError(fiber.StatusNotFound, "Incorrect Token matched")
+	}
+
+	// return c.JSON(user)
+	return c.Status(fiber.StatusOK).JSON(user)
+}
+
 
 func getAllProfiles(c *fiber.Ctx) error {
 	var people []User
@@ -156,6 +179,7 @@ func updateProfiles(c *fiber.Ctx) error {
 		UserDetail struct {
 			Fname string `json:"first_name"`
 			Lname string `json:"last_name"`
+			Image_src string `json:"image_src"`
 			Age int `json:"age"`
 		} `json:"userdetail"`
 	}
@@ -164,7 +188,7 @@ func updateProfiles(c *fiber.Ctx) error {
 		return err
 	}
 
-	if request.Username == "" || request.Password == "" || (request.UserDetail.Fname == "" && strconv.Itoa(request.UserDetail.Age) <= "0"){
+	if request.Username == "" || request.Password == "" || (request.UserDetail.Fname == "" && strconv.Itoa(request.UserDetail.Age) <= "0" && request.UserDetail.Lname == ""){
 		return fiber.ErrUnprocessableEntity
 	}
 
@@ -177,20 +201,21 @@ func updateProfiles(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusNotFound,"Username or Password not have in database")
 	}
 
-	if request.UserDetail.Fname != "" && strconv.Itoa(request.UserDetail.Age) > "0" && request.UserDetail.Lname != "" {
+	if request.UserDetail.Fname != "" && strconv.Itoa(request.UserDetail.Age) > "0" && request.UserDetail.Lname != "" && request.UserDetail.Image_src != "" {
 		db.Model(&User{}).Where("username = ?",request.Username).Updates(map[string]interface{}{
 			"first_name":request.UserDetail.Fname,
 			"last_name":request.UserDetail.Lname,
 			"age":request.UserDetail.Age,
+			"image_src":request.UserDetail.Image_src,
 		})
-		// db.Model(&User{}).Where("username = ?",request.Username).Update("name",request.UserDetail.Fname)
-		// db.Model(&User{}).Where("username = ?",request.Username).Update("age",request.UserDetail.Age)
-	} else if request.UserDetail.Fname != "" && strconv.Itoa(request.UserDetail.Age) <= "0" && request.UserDetail.Lname == ""{
+	} else if request.UserDetail.Fname != "" && strconv.Itoa(request.UserDetail.Age) == "0" && request.UserDetail.Lname == "" && request.UserDetail.Image_src == "" {
 		db.Model(&User{}).Where("username = ?",request.Username).Update("name",request.UserDetail.Fname)
-	} else if request.UserDetail.Fname == "" && strconv.Itoa(request.UserDetail.Age) >= "0" && request.UserDetail.Lname == ""{
+	} else if request.UserDetail.Fname == "" && strconv.Itoa(request.UserDetail.Age) != "0" && request.UserDetail.Lname == "" && request.UserDetail.Image_src == "" {
 		db.Model(&User{}).Where("username = ?",request.Username).Update("age",request.UserDetail.Age)
-	} else if request.UserDetail.Fname == "" && strconv.Itoa(request.UserDetail.Age) <= "0" && request.UserDetail.Lname != ""{
+	} else if request.UserDetail.Fname == "" && strconv.Itoa(request.UserDetail.Age) == "0" && request.UserDetail.Lname != "" && request.UserDetail.Image_src == "" {
 		db.Model(&User{}).Where("username = ?",request.Username).Update("age",request.UserDetail.Lname)
+	} else if request.UserDetail.Fname == "" && strconv.Itoa(request.UserDetail.Age) == "0" &&  request.UserDetail.Lname == "" && request.UserDetail.Image_src != "" {
+		db.Model(&User{}).Where("username = ?",request.Username).Update("age",request.UserDetail.Image_src)
 	}
 
 	return c.Status(fiber.StatusOK).SendString("Putted")
@@ -198,15 +223,14 @@ func updateProfiles(c *fiber.Ctx) error {
 type UserDetail struct {
 	Fname string `gorm:"column:first_name;varchar(20)" json:"first_name"`
 	Lname string `gorm:"column:last_name;varchar(20)" json:"last_name"`
+	Image_src string `gorm:"column:image_src;varchar(255)" json:"image_src"`
 	Age int `gorm:"column:age;int" json:"age"`
+	Auth_jwt string `gorm:"column:auth_jwt;varchar(255)" json:"auth_jwt"`
 }
 
 type User struct {
 	Id int `gorm:"primaryKey" json:"id"`
-	// gorm.Model
 	Username string `gorm:"column:username;varchar(20)" json:"username"`
 	Password string `gorm:"column:password;varchar(255)" json:"password"`
 	UserDetail UserDetail `gorm:"embedded;varchar(11)" json:"userdetail"`
-	// Name     string `gorm:"columns:name;varchar(50) json:"name"`
-	// Age      int    `gorm:"column:age;int" json:"age"`
 }
