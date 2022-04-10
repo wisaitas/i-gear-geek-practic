@@ -174,48 +174,41 @@ func deleteProfiles(c *fiber.Ctx) error {
 
 func updateProfiles(c *fiber.Ctx) error {
 	type UpdateRequest struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-		UserDetail struct {
-			Fname string `json:"first_name"`
-			Lname string `json:"last_name"`
-			Image_src string `json:"image_src"`
-			Age int `json:"age"`
-		} `json:"userdetail"`
+		Old_first_name string `json:"old_first_name"`
+		New_first_name string `json:"first_name"`
+		Last_name string `json:"last_name"`
+		Image_src string `json:"image_src"`
+		Age int `json:"age"`
 	}
 	var request UpdateRequest
 	if err := c.BodyParser(&request); err != nil {
 		return err
 	}
 
-	if request.Username == "" || request.Password == "" || (request.UserDetail.Fname == "" && strconv.Itoa(request.UserDetail.Age) <= "0" && request.UserDetail.Lname == ""){
+	if request.New_first_name == "" || request.Last_name == "" || strconv.Itoa(request.Age) <= "0" || request.Image_src == "" {
 		return fiber.ErrUnprocessableEntity
 	}
 
 	var user User
-	if result := db.Where("username = ?",request.Username).Find(&user); result.Error != nil {
-		return fiber.NewError(fiber.StatusNotFound,"Username or Password not have in database")
-	}
-	
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password),[]byte(request.Password)); err != nil {
+	if result := db.Where("first_name = ?",request.Old_first_name).Find(&user); result.Error != nil {
 		return fiber.NewError(fiber.StatusNotFound,"Username or Password not have in database")
 	}
 
-	if request.UserDetail.Fname != "" && strconv.Itoa(request.UserDetail.Age) > "0" && request.UserDetail.Lname != "" && request.UserDetail.Image_src != "" {
-		db.Model(&User{}).Where("username = ?",request.Username).Updates(map[string]interface{}{
-			"first_name":request.UserDetail.Fname,
-			"last_name":request.UserDetail.Lname,
-			"age":request.UserDetail.Age,
-			"image_src":request.UserDetail.Image_src,
+	if request.New_first_name != "" && strconv.Itoa(request.Age) > "0" && request.Last_name != "" && request.Image_src != "" {
+		db.Model(&User{}).Where("first_name = ?",request.Old_first_name).Updates(map[string]interface{}{
+			"first_name":request.New_first_name,
+			"last_name":request.Last_name,
+			"age":request.Age,
+			"image_src":request.Image_src,
 		})
-	} else if request.UserDetail.Fname != "" && strconv.Itoa(request.UserDetail.Age) == "0" && request.UserDetail.Lname == "" && request.UserDetail.Image_src == "" {
-		db.Model(&User{}).Where("username = ?",request.Username).Update("name",request.UserDetail.Fname)
-	} else if request.UserDetail.Fname == "" && strconv.Itoa(request.UserDetail.Age) != "0" && request.UserDetail.Lname == "" && request.UserDetail.Image_src == "" {
-		db.Model(&User{}).Where("username = ?",request.Username).Update("age",request.UserDetail.Age)
-	} else if request.UserDetail.Fname == "" && strconv.Itoa(request.UserDetail.Age) == "0" && request.UserDetail.Lname != "" && request.UserDetail.Image_src == "" {
-		db.Model(&User{}).Where("username = ?",request.Username).Update("age",request.UserDetail.Lname)
-	} else if request.UserDetail.Fname == "" && strconv.Itoa(request.UserDetail.Age) == "0" &&  request.UserDetail.Lname == "" && request.UserDetail.Image_src != "" {
-		db.Model(&User{}).Where("username = ?",request.Username).Update("age",request.UserDetail.Image_src)
+	} else if request.New_first_name != "" && strconv.Itoa(request.Age) == "0" && request.Last_name == "" && request.Image_src == "" {
+		db.Model(&User{}).Where("first_name = ?",request.Old_first_name).Update("first_name",request.New_first_name)
+	} else if request.New_first_name == "" && strconv.Itoa(request.Age) != "0" && request.Last_name == "" && request.Image_src == "" {
+		db.Model(&User{}).Where("first_name = ?",request.Old_first_name).Update("age",request.Age)
+	} else if request.New_first_name == "" && strconv.Itoa(request.Age) == "0" && request.Last_name != "" && request.Image_src == "" {
+		db.Model(&User{}).Where("first_name = ?",request.Old_first_name).Update("last_name",request.Last_name)
+	} else if request.New_first_name == "" && strconv.Itoa(request.Age) == "0" &&  request.Last_name == "" && request.Image_src != "" {
+		db.Model(&User{}).Where("first_name = ?",request.Old_first_name).Update("image_src",request.Image_src)
 	}
 
 	return c.Status(fiber.StatusOK).SendString("Putted")

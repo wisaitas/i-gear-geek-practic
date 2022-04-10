@@ -21,14 +21,12 @@
                 
                 <b-button type="submit" variant="primary">Login</b-button>
             </b-form>
-            <b-card header="result" class="mt-3">username : {{this.form.username}}</b-card>
-            <b-card header="result" class="mt-3">password : {{this.form.password}}</b-card>
+            <!-- <b-card header="result" class="mt-3">password : {{this.form.password}}</b-card> -->
         </b-card>
     </div>
 </template>
 
 <script>
-import axios from 'axios'
 export default {
     data(){
         return {

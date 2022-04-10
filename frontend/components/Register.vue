@@ -39,17 +39,6 @@
                 
                 <b-button type="submit" variant="primary">Submit</b-button>
             </b-form>
-            <b-card header="result" class="mt-3">{{ JSON.stringify({
-                        username:this.form.username,
-                        password:this.form.password,
-                        userdetail: {
-                            first_name:this.form.first_name,
-                            last_name:this.form.last_name,
-                            age:this.form.age,
-                            image_src:this.form.image_src,
-
-                        }
-                    })}}</b-card>
         </b-card>
     </div>
 </template>
@@ -74,7 +63,7 @@ export default {
             evt.preventDefault()
             await axios.post('http://localhost:8000/signup',JSON.stringify({
                 username:this.form.username,
-                passowrd:this.form.passowrd,
+                password:this.form.password,
                 userdetail: {
                     first_name:this.form.first_name,
                     last_name:this.form.last_name,
