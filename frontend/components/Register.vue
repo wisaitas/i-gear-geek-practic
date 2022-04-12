@@ -79,25 +79,6 @@ export default {
             .catch((err) => {
                 console.log(err)
             })
-            // try {
-            //     await fetch('http://localhost:8000/signup', {
-            //         method:'POST',
-            //         body: JSON.stringify({
-            //             username:this.form.username,
-            //             password:this.form.password,
-            //             userdetail: {
-            //                 first_name:this.form.first_name,
-            //                 last_name:this.form.last_name,
-            //                 age:this.form.age,
-            //                 image_src:this.form.image_src,
-            //                 auth_jwt:"",
-            //             }
-            //         })
-            //     })
-            //     // await this.$router.push('/login')
-            // } catch (err) {
-            //     console.log(err)
-            // }
         }
     }
 }

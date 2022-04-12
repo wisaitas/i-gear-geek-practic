@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -18,13 +19,15 @@ import (
 )
 
 var db *gorm.DB
-
-const jwtSecret = "igeargeekjiw"
+var jwtSecret = os.Getenv("JWT_SECRET_KEY")
+// var jwtSecret = "igeargeekjiw"
 
 func main() {
 
 	var err error
-	dsn := "root:1234@tcp(127.0.0.1:3306)/igeargeekpracticdb?charset=utf8mb4&parseTime=True&loc=Local"
+	// os.Setenv("PORT","8000")
+	dsn := os.Getenv("DB_ADDR")
+	// dsn := "root:admin@tcp(127.0.0.1:3306)/igeargeekpracticdb?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic(err)
@@ -58,7 +61,7 @@ func main() {
 	app.Delete("/profile/:id", deleteProfiles)
 	app.Put("/profile", updateProfiles)
 
-	if err := app.Listen(":8000"); err != nil {
+	if err := app.Listen(":" + os.Getenv("PORT")); err != nil {
 		panic(err)
 	}
 }

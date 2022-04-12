@@ -40,6 +40,9 @@ export default {
     '@nuxtjs/axios',
     '@nuxtjs/auth-next',
   ],
+  env : {
+    baseURL: process.env.BASE_URL || 'http://localhost:8000'
+  },
   auth: {
     redirect: {
       login: '/login'
@@ -54,7 +57,7 @@ export default {
           // autoFetch: false
         },
         endpoints: {
-          login: { url: 'http://localhost:8000/login', method: 'post'},
+          login: { url: process.env.baseURL + 'login', method: 'post'},
           logout: { url: 'http://localhost:8000/logout', method: 'post' },
           user: { url: 'http://localhost:8000/profile', method: 'get' }
         }

@@ -1,0 +1,27 @@
+version: '3.9'
+services:
+  db:
+    image: mysql
+    container_name: practicdb
+    extra_hosts:
+    - "host.docker.internal:host-gateway"
+    ports:
+      - "3306:3306"
+    expose:
+      - "3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "admin"
+      MYSQL_DATABASE: 'igeargeekpracticdb'
+
+  api:
+    image: golang-api
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    environment:
+      DB_ADDR: "root:admin@tcp(host.docker.internal:3306)/igeargeekpracticdb?charset=utf8mb4&parseTime=True&loc=Local" 
+      JWT_SECRET_KEY: "igeargeekjiw" 
+      PORT: "8000"
+    container_name: "practicapi"
+    command: "go run main.go"
