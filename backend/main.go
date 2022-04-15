@@ -20,14 +20,12 @@ import (
 
 var db *gorm.DB
 var jwtSecret = os.Getenv("JWT_SECRET_KEY")
-// var jwtSecret = "igeargeekjiw"
 
 func main() {
 
 	var err error
-	// os.Setenv("PORT","8000")
+
 	dsn := os.Getenv("DB_ADDR")
-	// dsn := "root:admin@tcp(127.0.0.1:3306)/igeargeekpracticdb?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic(err)
@@ -40,6 +38,7 @@ func main() {
 		AllowMethods: "GET,POST,PUT,DELETE",
 	}))
 
+	// authorize backend 
 	// app.Use("/profiles",jwtmiddleware.New(jwtmiddleware.Config{
 	// 	SigningMethod: "HS256",
 	// 	SigningKey: []byte(jwtSecret),
@@ -60,10 +59,83 @@ func main() {
 	app.Post("/logout",logout)
 	app.Delete("/profile/:id", deleteProfiles)
 	app.Put("/profile", updateProfiles)
+	app.Post("/todo",addTodo)
+	app.Get("/todo",getAllTodo)
+	app.Put("/todo",updateTodo)
+	app.Post("/tododelete",deleteTodo)
 
 	if err := app.Listen(":" + os.Getenv("PORT")); err != nil {
 		panic(err)
 	}
+}
+
+func addTodo(c *fiber.Ctx) error {
+	var request Task
+	if err := c.BodyParser(&request); err != nil {
+		return err
+	}
+	
+	if db.Migrator().HasTable(&Task{}) {
+		if result := db.Create(&request); result.Error != nil {
+			return result.Error
+		}
+	} else {
+		db.Migrator().CreateTable(&Task{})
+		if result := db.Create(&request); result.Error != nil {
+			return result.Error
+		}
+	}
+
+	return c.Status(fiber.StatusCreated).SendString("Add Todo Success")
+}
+
+func getAllTodo(c *fiber.Ctx) error {
+	type Task struct {
+		Task string `gorm:"column:task;varchar(255)" json:"task"`
+	}
+	
+	var tasks []Task
+	if err := db.Find(&tasks).Error; err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(&tasks)
+}
+
+func updateTodo(c *fiber.Ctx) error {
+	type UpdateToDoRequest struct {
+		OldTask string `json:"old_task"`
+		NewTask string `json:"task"`
+	}
+	var request UpdateToDoRequest
+	if err := c.BodyParser(&request); err != nil {
+		return err
+	}
+	
+	var task Task
+	if result := db.Where("task = ?",request.OldTask).Find(&task); result.Error != nil {
+		return fiber.NewError(fiber.StatusNotFound,"Task not have in database")
+	}
+
+	db.Model(&Task{}).Where("task = ?",request.OldTask).Update("task",request.NewTask)
+	
+	return c.Status(fiber.StatusOK).SendString("Edit Task Success")
+}
+
+func deleteTodo(c *fiber.Ctx) error {
+	type DeleteToDoRequest struct {
+		Task string `json:"task"`
+	}
+	var request DeleteToDoRequest
+	if err := c.BodyParser(&request); err != nil {
+		return err
+	}
+
+	if result := db.Delete(&Task{},"task = ?",request.Task); result.Error != nil {
+		return result.Error
+	}
+
+	return c.SendString("Delete Todo Success")
 }
 
 func signup(c *fiber.Ctx) error {
@@ -216,6 +288,12 @@ func updateProfiles(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).SendString("Putted")
 }
+
+type Task struct {
+	Id int `gorm:"primaryKey" json:"id"`
+	Task string `gorm:"column:task;varchar(255)" json:"task"`
+}
+
 type UserDetail struct {
 	Fname string `gorm:"column:first_name;varchar(20)" json:"first_name"`
 	Lname string `gorm:"column:last_name;varchar(20)" json:"last_name"`

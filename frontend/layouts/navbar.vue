@@ -9,6 +9,7 @@
                 <div v-else>
                     <nuxt-link class="nav-item nav-link" to="/login">Login</nuxt-link>
                 </div>
+                <nuxt-link class="nav-item nav-link" to="/todo">Todolist</nuxt-link>
                 <nuxt-link class="nav-item nav-link" to="/register">Register</nuxt-link>
 
                 <b-nav-item-dropdown text="Profile" left>

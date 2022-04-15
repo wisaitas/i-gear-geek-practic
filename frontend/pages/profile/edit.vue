@@ -31,13 +31,13 @@
                 </b-card-text>
                 
                 <b-button @click="onSubmit" variant="primary">Save</b-button>
-                <b-card header="result" class="mt-3">{{ JSON.stringify ({
+                <!-- <b-card header="result" class="mt-3">{{ JSON.stringify ({
                 old_first_name:this.$auth.user.first_name,
                 first_name:this.details.first_name,
                 last_name:this.details.last_name,
                 image_src:this.details.image_src,
                 age:this.details.age
-            })}}</b-card>
+            })}}</b-card> -->
             </b-form>
             </b-card>
     </div>
@@ -78,7 +78,6 @@ export default {
             .catch((err) => {
                 console.log(err)
             })
-            // this.$router.push("/profile")
         }
     }
 }

@@ -17,8 +17,11 @@ services:
     image: golang-api
     depends_on:
       - db
+    build: .
     ports:
       - "8000:8000"
+    expose:
+      - 8000
     environment:
       DB_ADDR: "root:admin@tcp(host.docker.internal:3306)/igeargeekpracticdb?charset=utf8mb4&parseTime=True&loc=Local" 
       JWT_SECRET_KEY: "igeargeekjiw" 
