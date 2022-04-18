@@ -15,6 +15,7 @@ services:
 
   api:
     image: golang-api
+    container_name: "practicapi"
     depends_on:
       - db
     build: .
@@ -26,5 +27,17 @@ services:
       DB_ADDR: "root:admin@tcp(host.docker.internal:3306)/igeargeekpracticdb?charset=utf8mb4&parseTime=True&loc=Local" 
       JWT_SECRET_KEY: "igeargeekjiw" 
       PORT: "8000"
-    container_name: "practicapi"
     command: "go run main.go"
+
+  # app:
+  #   image: webapp
+  #   container_name: "nuxt-app"
+  #   depends_on:
+  #     - api
+  #     - db
+  #   build: ../frontend/
+  #   ports:
+  #     - "3000:3000"
+  #   expose: 
+  #     - 3000
+  #   command: "npm run dev"
